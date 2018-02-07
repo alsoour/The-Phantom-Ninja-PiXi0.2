@@ -1,0 +1,75 @@
+{"frames": {
+
+"map.jpg":
+{
+	"frame": {"x":1,"y":1163,"w":720,"h":1161},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":720,"h":1161},
+	"sourceSize": {"w":720,"h":1161},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"map2.jpg":
+{
+	"frame": {"x":2166,"y":1,"w":720,"h":1160},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":720,"h":1160},
+	"sourceSize": {"w":720,"h":1160},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"map3.jpg":
+{
+	"frame": {"x":1445,"y":1163,"w":720,"h":1201},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":720,"h":1201},
+	"sourceSize": {"w":720,"h":1201},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"map_Grassland.jpg":
+{
+	"frame": {"x":723,"y":1,"w":719,"h":1160},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":719,"h":1160},
+	"sourceSize": {"w":719,"h":1160},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"map_hard.jpg":
+{
+	"frame": {"x":1,"y":1,"w":720,"h":1160},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":720,"h":1160},
+	"sourceSize": {"w":720,"h":1160},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"map_swamp.jpg":
+{
+	"frame": {"x":723,"y":1163,"w":720,"h":1201},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":720,"h":1201},
+	"sourceSize": {"w":720,"h":1201},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"map_town.jpg":
+{
+	"frame": {"x":1444,"y":1,"w":720,"h":1160},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":720,"h":1160},
+	"sourceSize": {"w":720,"h":1160},
+	"pivot": {"x":0.5,"y":0.5}
+}},
+"meta": {
+	"app": "http://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "thePhantomNinjaMap.jpg",
+	"format": "RGB888",
+	"size": {"w":2887,"h":2365},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:f633e2e715714fe10c956675ab3d208a:b2bb729968161c27cc73b6e52ee1c319:68bff69b02155311ddffb94d8ba0708b$"
+}
+}

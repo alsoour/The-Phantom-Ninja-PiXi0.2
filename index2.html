@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width,user-scalable=no">
+	<title>Document</title>
+</head>
+<style>
+	*{
+		margin:0;
+		padding:0;
+	}
+	html,body{
+		width:100%;
+		height:100%;
+		overflow:hidden;
+	}
+</style>
+<body>
+	
+</body>
+<script src="js/pixi.min.js"></script>
+<script src="js/pixi-spine.js"></script>
+<script src="js/zepto.js"></script>
+<script>
+	
+
+	$(function(){
+		let Application = PIXI.Application,
+			Container = PIXI.Container,
+		    loader = PIXI.loader,
+		    resources = PIXI.loader.resources,
+		    TextureCache = PIXI.utils.TextureCache,
+		    Sprite = PIXI.Sprite,
+		    Rectangle = PIXI.Rectangle;
+
+		let winW = document.body.clientWidth;
+		let	winH = document.body.clientHeight;
+
+		
+		let app = new Application({
+			width:winW,
+			height:winH,
+			antialiasing: true, 
+		    transparent: false, 
+		    resolution: 1
+		})
+		var spineBoy=null;
+		var s1=200;
+		document.body.appendChild(app.view);
+		let stage = app.stage;
+		let renderer = PIXI.autoDetectRenderer(
+		               winW,
+		               winH,
+		               {view: document.getElementsByTagName("canvas")[0]}
+		            );
+		init();
+		function init(){
+			var bgTexture = PIXI.Texture.fromImage("examples/images/map_Grassland.jpg");
+			//计算比例
+			bgWidth=bgTexture.baseTexture.source.width;
+			bgHeight=bgTexture.baseTexture.source.width/winW*winH;
+			bg = new PIXI.extras.TilingSprite(bgTexture,bgWidth,bgHeight);
+			bg.position.x=0;
+			bg.position.y=0;
+			bg.scale.x = winW/bgWidth;
+			bg.scale.y = winH/bgHeight;
+			bg.tilePosition.x=0;
+			bg.tilePosition.y=0;
+			stage.addChild(bg);
+
+			requestAnimationFrame(update);
+		}
+
+		function update(){
+			bg.tilePosition.y += 3;
+			if(spineBoy){
+				if(spineBoy.x>s1)spineBoy.x -=20;
+			}
+			renderer.render(stage);
+			requestAnimationFrame(update);
+		}
+		PIXI.loader
+	    .add('spineboy', 'examples/spine/player/ninja/top/skeleton.json')
+	    .load(onAssetsLoaded);
+
+		stage.interactive = true;
+
+		function onAssetsLoaded(loader, res)
+		{
+		    // create a spine boy
+		     spineBoy = new PIXI.spine.Spine(res.spineboy.spineData);
+
+		    // set the position
+		    spineBoy.x =200;
+		    spineBoy.y = 200;
+
+		    spineBoy.scale.set(1.5);
+
+		    // set up the mixes!
+		    spineBoy.stateData.setMix('animation', 'animation2', 0.05);
+		    spineBoy.stateData.setMix('animation2', 'animation', 0.1);
+
+		    // play animation
+		    spineBoy.state.setAnimation(0, 'animation', true);
+			stage.on('pointerdown', function() {
+		    	s1 = 100;
+		        spineBoy.state.setAnimation(0, 'animation2', false);
+		        spineBoy.state.addAnimation(0, 'animation', true, 0.08);
+		    });
+		    stage.addChild(spineBoy);
+
+		    
+		}
+	})
+
+	// var app = new PIXI.Application();
+	// document.body.appendChild(app.view);
+
+	// load spine data
+	// PIXI.loader
+	//     .add('spineboy', 'examples/spine/player/ninja/top/skeleton.json')
+	//     .load(onAssetsLoaded);
+
+	// app.stage.interactive = true;
+
+	// function onAssetsLoaded(loader, res)
+	// {
+	//     // create a spine boy
+	//     var spineBoy = new PIXI.spine.Spine(res.spineboy.spineData);
+
+	//     // set the position
+	//     spineBoy.x =200;
+	//     spineBoy.y = 200;
+
+	//     spineBoy.scale.set(1.5);
+
+	//     // set up the mixes!
+	//     spineBoy.stateData.setMix('animation', 'animation2', 0.2);
+	//     spineBoy.stateData.setMix('animation2', 'animation', 0.4);
+
+	//     // play animation
+	//     spineBoy.state.setAnimation(0, 'animation', true);
+
+	//     app.stage.addChild(spineBoy);
+
+	//     app.stage.on('pointerdown', function() {
+	//     	spineBoy.x =100;
+	//         spineBoy.state.setAnimation(0, 'animation2', false);
+	//         spineBoy.state.addAnimation(0, 'animation', true, 0.1);
+	//     });
+	// }
+
+
+	// PIXI.loader
+	//     .add('dragon', 'examples/spine/player/ninja/top/skeleton.json')
+	//     .load(onAssetsLoaded);
+
+	// var dragon = null;
+
+	// function onAssetsLoaded(loader,res)
+	// {	
+	// 	console.log(PIXI.spine)
+	//     dragon = new PIXI.spine.Spine(res.dragon.spineData);
+	//     dragon.skeleton.setToSetupPose();
+	//     dragon.update(0);
+	//     dragon.autoUpdate = false;
+	//     var dragonCage = new PIXI.Container();
+	//     dragonCage.addChild(dragon);
+	//     var localRect = dragon.getLocalBounds();
+	//     dragon.position.set(-localRect.x, -localRect.y);
+	//     var scale = Math.min(
+	//         (app.screen.width * 0.1) / dragonCage.width,
+	//         (app.screen.height * 0.1) / dragonCage.height
+	//     );
+	//     dragonCage.scale.set(scale, scale);
+	//     dragonCage.position.set(
+	//         (app.screen.width - dragonCage.width) * 0.5,
+	//         (app.screen.height - dragonCage.height) * 0.5
+	//     );
+	//     dragon.state.setAnimation(0, 'animation', true);
+	//     app.stage.addChild(dragonCage);
+	//     app.stage.on('pointerdown', function() {
+	//         spineBoy.state.setAnimation(0, 'animation', false);
+	//     });
+	//     // app.start();
+	//     // update();
+	// }
+	// function update(){
+	// 	// bg.tilePosition.y += 3;
+	// 	renderer.render(stage);
+	// 	requestAnimationFrame(update);
+	// }
+	// // app.ticker.add(function() {
+	// //     dragon.update(0.01666666666667);
+	// // });
+
+	
+</script>
+</html>
