@@ -6,14 +6,16 @@ $(function(){
 		resources = PIXI.loader.resources,
 		Sprite = PIXI.Sprite,
 		Text = PIXI.Text,
+    	Graphics = PIXI.Graphics,
     	TextStyle = PIXI.TextStyle;
 
 	//游戏模块加载
 	//基础属性
-	const winW = document.body.clientWidth,
-		  winH = document.body.clientHeight,
+	const winW = window.innerWidth,
+		  winH = window.innerHeight,
 		  frameNumber = 0.001666666666667;
-	let	  bgH,bgW,scaleX,scaleY,showState;
+	let	  bgH,bgW,scaleX,scaleY,showState,
+		  setime=0;
 	/*
 		showState   0 撑满屏幕
 					1 不变形宽度撑满屏幕
@@ -24,7 +26,7 @@ $(function(){
 		lastTime = new Date();
 
 	//场景
-	let sceneLoding,sceneMain,sceneGame1,sceneGame2,sceneGame3;
+	let sceneLoding,sceneMain,sceneGame1,sceneGame2,sceneGame3,sceneOver,secneEye;
 
 	//场景元素
 	//loading
@@ -32,10 +34,11 @@ $(function(){
 	//main
 	let mainBg,mainBg2,mainChar,mainWord;
 	//game
-	let gameBg,gameBg2,ninja,id,ObstacleNum,ObstacleInfm;
+	let gameBg,gameBg2,ninja,id,ObstacleNum,ObstacleInfm,bloodWord,eye;
 		//button
 		let leftButton,rightButton,jumpButton;
-
+	//over
+	let overChar,backWord,againWord;
 	//游戏元素
 	let isStart=false,
 		ObstacleMove=false,
@@ -45,7 +48,7 @@ $(function(){
 		ShakeFrequency = 2,
 		gameBgArr,
 		stage=1,
-		GameSpeed=10,
+		GameSpeed=50,
 		BGspeed=GameSpeed*stage,
 		CharMoveSpeed = GameSpeed*1.5,
 		displacementCenterM = {
@@ -55,10 +58,18 @@ $(function(){
 		displacementCenter = [],
 		currentPos = 1,
 		suspendTime = 500,
-		settingTime = 1000,
+		settingTime = 500,
 		startTime = 1000,
-		PsettingTime = 2000,
-		ShakeTime = 200;
+		PsettingTime = 500,
+		ShakeTime = 300,
+		bloodNum=1,
+		gameOver = false,
+		ObstacleTips=[],
+		tipsNum=0,
+		tipsMove=false,
+		tipsCome=false,
+		tipsGo=false,
+		isFirst=true;
 	//定义画布
 	let app = new Application({
 		width:winW,
@@ -104,7 +115,6 @@ $(function(){
 			loadingWord = new Text("loading...", style);
 			loadingWord.position.y = 928;
 			loadingWord.position.x = bgW/2-loadingWord.width/2;
-			// console.log(loadingWord.width)
 			sceneLoding.addChild(loadingWord);
 			app.stage.addChild(sceneLoding);
 			game.appScale(1)
@@ -112,6 +122,12 @@ $(function(){
 		},
 		"loop":function(){
 			if(isStart){
+				if(isShake){
+					game.Shake();
+				}
+				if(gameOver){
+					game.spineRate(10)
+				}
 				game.spineRate(frameNumber*GameSpeed)
 				game.animateGameBg();
 				if(ObstacleMove){
@@ -120,8 +136,8 @@ $(function(){
 				if(ninja.isMove){
 					game.animationChar();
 				}
-				if(isShake){
-					game.Shake();
+				if(tipsMove){
+					game.animationTips();
 				}
 				// }else{
 				// 	app.stage.rotation=0;
@@ -155,7 +171,7 @@ $(function(){
 		},
 		"render":function(){
 			game.renderMain();
-			game.renderGame();
+			// game.gameInit();
 		},
 		"renderMain":function(){
 			//主菜单
@@ -196,6 +212,7 @@ $(function(){
 			mainWord.position.x = bgW/2+150;
 			mainWord.interactive = true;
 			mainWord.on("pointerdown",function(){
+				game.gameInit();
 				sceneMain.visible = false;
 				sceneGame1.visible = true;
 				sceneGame2.visible = true;
@@ -217,10 +234,13 @@ $(function(){
 			game.renderGameBg();
 			game.renderButton();
 			game.renderChar();
+			game.renderBlood();
 			game.renderObstacle();
 			app.stage.addChild(sceneGame1);
+			game.renderEye();
 			app.stage.addChild(sceneGame3);
 			app.stage.addChild(sceneGame2);
+			game.renderOver();
 		},
 		"renderGameBg":function(){
 			//PIXI原生方法图片会失真暂时不考虑
@@ -244,9 +264,15 @@ $(function(){
 			}else{
 				BGspeed=GameSpeed*stage;
 			}
+			let minH = 9999;
+			for(let i = gameBgArr.length-1;i>=0;i--){
+				if(gameBgArr[i].y<minH){
+					minH=gameBgArr[i].y;
+				}
+			}
 			for(let i = gameBgArr.length-1;i>=0;i--){
 				if(gameBgArr[i].y>gameBgArr[i].height*1.5){
-					gameBgArr[i].y = -gameBgArr[0].height*1.5+BGspeed+1;
+					gameBgArr[i].y = minH-gameBgArr[0].height;
 				}
 				gameBgArr[i].y+=BGspeed;
 			}
@@ -281,7 +307,6 @@ $(function(){
 		    }
 		    ninja.state.setAnimation(0,'animation',true);
 
-
 		    leftButton.interactive = true;
 			leftButton.on('pointerdown', function() {
 				if(ninja.isMove)return;
@@ -301,7 +326,7 @@ $(function(){
 				if(ninja.isMove)return;
 		    	currentPos++;
 		    	if(currentPos>=displacementCenter.length){
-		    		currentPos=displacementCenter.length;
+		    		currentPos=displacementCenter.length-1;
 		    		ninja.isMove = null;
 		    		return;
 		    	}
@@ -363,6 +388,24 @@ $(function(){
 				}
 			}
 		},
+		"renderBlood":function(){
+			let style = new TextStyle({
+			  fontFamily: "Arial",
+			  fontSize: 60,
+			  fill: "white",
+			  stroke: '#ff3300',
+			  strokeThickness: 4,
+			  dropShadow: true,
+			  dropShadowColor: "#000000",
+			  dropShadowBlur: 4,
+			  dropShadowAngle: Math.PI / 6,
+			  dropShadowDistance: 6,
+			});
+			bloodWord = new Text(bloodNum, style);
+			bloodWord.position.y = (winH/2-300);
+			bloodWord.position.x = (winW/2-100);
+			sceneGame2.addChild(bloodWord);
+		},
 		"renderObstacle":function(){
 			ObstacleNum = randomInt(2,4);
 			ObstacleInfm = [];
@@ -402,16 +445,112 @@ $(function(){
 				for(let j=0;j<ObstacleInfm[i].Sub.length;j++){
 					let muzhuang = new Sprite(id["muzhuang.png"]);
 					muzhuang.x = displacementCenter[ObstacleInfm[i].Sub[j]]-muzhuang.width/2;
-					muzhuang.y = -muzhuang.height;
+					// muzhuang.y = -muzhuang.height*3;
+					muzhuang.y = bgH/2-muzhuang.height*4;
+					muzhuang.alpha = 0;
 					sceneGame3.addChild(muzhuang);
 					ObstacleInfm[i]["sprite"].push({
 						"obj":muzhuang
 					})
 				}
 			}
-			setTimeout(function(){
-				ObstacleMove = true;
-			},startTime)
+			// setTimeout(function(){
+			// 	ObstacleMove = true;
+			// },startTime)
+			if(setime>=2){
+				stage = 2.5;
+			}
+			setime++;
+			if(isFirst){
+				setTimeout(function(){
+					secneEye.visible = true;
+					tipsMove = true;
+					tipsCome =true;
+				},2000)
+				isFirst=true;
+			}else{
+				setTimeout(function(){
+					secneEye.visible = true;
+					tipsMove = true;
+					tipsCome =true;
+				},startTime)
+			}
+		},
+		"renderEye":function(){
+			secneEye = new Container();
+			secneEye.visible = false;
+			let rectangle = new Graphics();
+			rectangle.beginFill(0x000000);
+			rectangle.drawRect(0, 0, bgW, bgH);
+			rectangle.endFill();
+			// rectangle.alpha  = 0.9;
+			rectangle.x = 0;
+			rectangle.y = 0;
+			secneEye.addChild(rectangle);
+
+			eye = new PIXI.spine.Spine(resources.eye.spineData);
+			eye.x = bgW/2;
+			eye.y = bgH/2;
+		    eye.state.setAnimation(0,'animation1',true);
+			secneEye.addChild(eye);
+
+			for(let i = 0;i<4;i++){
+				ObstacleTips.push(bgH/2-141*i);
+			}
+			app.stage.addChild(secneEye);
+		},
+		"animationTips":function(){
+			let isOver = false;
+
+			
+			if(tipsGo){
+				for(let j =0;j<ObstacleInfm[tipsNum].sprite.length;j++){
+					ObstacleInfm[tipsNum].sprite[j].obj.y+=10;
+					ObstacleInfm[tipsNum].sprite[j].obj.alpha+=0.01;
+					if(ObstacleInfm[tipsNum].sprite[j].obj.y>=(bgH/2+ObstacleInfm[tipsNum].sprite[j].obj.height)){
+						ObstacleInfm[tipsNum].sprite[j].obj.y = bgH/2+ObstacleInfm[tipsNum].sprite[j].obj.height;
+						ObstacleInfm[tipsNum].sprite[j].obj.alpha = 0;
+						isOver = true;
+					}
+				}
+				if(isOver){
+					tipsNum++;
+					if(tipsNum==ObstacleInfm.length){
+						tipsNum = 0;
+						for(let i=0;i<ObstacleInfm.length;i++){
+							for(let j=0;j<ObstacleInfm[i].sprite.length;j++){
+								ObstacleInfm[i].sprite[j].obj.y = -ObstacleInfm[i].sprite[j].obj.height*3;
+								ObstacleInfm[i].sprite[j].obj.alpha = 1;
+							}
+						}
+						tipsGo=false;
+						setTimeout(function(){
+							secneEye.visible = false;
+							ObstacleMove = true;
+							tipsMove = false;
+						},startTime)
+					}
+				}
+			}
+			if(tipsCome){
+				for(let j =0;j<ObstacleInfm[tipsNum].sprite.length;j++){
+					ObstacleInfm[tipsNum].sprite[j].obj.y+=10;
+					ObstacleInfm[tipsNum].sprite[j].obj.alpha+=0.01;
+					if(ObstacleInfm[tipsNum].sprite[j].obj.y>=(bgH/2-ObstacleInfm[tipsNum].sprite[j].obj.height*tipsNum)){
+						ObstacleInfm[tipsNum].sprite[j].obj.y = bgH/2-ObstacleInfm[tipsNum].sprite[j].obj.height*tipsNum;
+						ObstacleInfm[tipsNum].sprite[j].obj.alpha = 1;
+						isOver = true;
+					}
+				}
+				if(isOver){
+					tipsNum++;
+					if(tipsNum==ObstacleInfm.length){
+						tipsNum = 0;
+						tipsCome=false;
+						tipsGo=true;
+					}
+				}
+			}
 		},
 		"animationObstacle":function(){
 			if(GameSpeed==1){
@@ -422,22 +561,59 @@ $(function(){
 			for(let i = 0;i<1;i++){
 				for(let j = ObstacleInfm[i].sprite.length-1;j>=0;j--){
 				// for(let j = 0;j<ObstacleInfm[i].sprite.length;j++){
-					ObstacleInfm[i].sprite[j].obj.y +=BGspeed;
 					if((ObstacleInfm[i].sprite[0].obj.y+ObstacleInfm[i].sprite[0].obj.height+ninja.height/2)>=ninja.y&&!ObstacleInfm[i].sprite[0]["isPass"]){
 						let isCollision = false;
 						for(var x=0;x<ObstacleInfm[i].Sub.length;x++){
 							if(ObstacleInfm[i].Sub[x]==currentPos){
 								ObstacleInfm[i].sprite[0]["isPass"] = true;
-								GameSpeed=0;
+								GameSpeed=10;
 								isCollision = true;
+								bloodWord.text = --bloodNum;
 								isShake=true;
+								if(bloodNum==0){
+									GameSpeed=0;
+									gameOver=true;
+		    						setTimeout(function(){
+										isShake=false;
+										if(!isShakeLeft){
+											isShakeLeft=true;
+											app.stage.x-=10;
+											app.stage.y-=30;
+										}
+		    							ninja.state.setAnimation(0,'tired',true);
+	    								leftButton.interactive = false;
+	    								rightButton.interactive = false;
+	    								jumpButton.interactive = false;
+		    							setTimeout(function(){
+		    								isStart = false;
+											sceneOver.visible = true;
+		    							},1000)
+									},ShakeTime)
+									return;
+								}
 								setTimeout(function(){
 									isShake=false;
-									GameSpeed=10;
 									if(!isShakeLeft){
-										app.stage.rotation=0;
-										app.stage.y-=70;
+										isShakeLeft=true;
+										app.stage.x-=10;
+										app.stage.y-=30;
 									}
+									// GameSpeed=10;
+									// let minH = 9999;
+									// for(let x = gameBgArr.length-1;x>=0;x--){
+									// 	if(gameBgArr[x].y<minH){
+									// 		minH=gameBgArr[x].y;
+									// 	}
+									// }
+									// for(let y = gameBgArr.length-1;y>=0;y--){
+									// 	if(gameBgArr[y].y>gameBgArr[y].height*1.5){
+									// 		gameBgArr[y].y = minH-gameBgArr[0].height;
+									// 	}
+									// 	gameBgArr[y].y+=ObstacleInfm[i].sprite[0].obj.height;
+									// }
+									// for(let z = ObstacleInfm[0].sprite.length-1;z>=0;z--){
+									// 	ObstacleInfm[0].sprite[z].obj.y +=ObstacleInfm[i].sprite[0].obj.height;
+									// }
 								},ShakeTime)
 							}
 						}
@@ -464,6 +640,7 @@ $(function(){
 						},settingTime)
 						return;
 					}
+					ObstacleInfm[i].sprite[j].obj.y +=BGspeed;
 				}
 			}
 		},
@@ -473,19 +650,115 @@ $(function(){
 			ShakeNum=0;
 			if(isShakeLeft){
 				isShakeLeft=false;
-				app.stage.rotation=0.001;
-				app.stage.y+=70;
+				app.stage.x+=10;
+				app.stage.y+=30;
 			}else{
 				isShakeLeft=true;
-				app.stage.rotation=-0.001;
-				app.stage.y-=70;
+				app.stage.x-=10;
+				app.stage.y-=30;
 			}
+		},
+		"renderOver":function(){
+			sceneOver = new Container();
+			sceneOver.visible = false;
+
+			let rectangle = new Graphics();
+			rectangle.beginFill(0x000000);
+			rectangle.drawRect(0, 0, bgW, bgH);
+			rectangle.endFill();
+			rectangle.alpha  = 0.4;
+			rectangle.x = 0;
+			rectangle.y = 0;
+			sceneOver.addChild(rectangle);
+
+			// sceneOver.background = 0x000000
+			sceneOver.backgroundColor = 0x000000
+			overChar = new PIXI.spine.Spine(resources.spine_ninja2.spineData);
+			overChar.x = bgW/2-100;
+			overChar.y = bgH/2+200;
+			overChar.state.setAnimation(0, 'animation', true);
+			sceneOver.addChild(overChar);
+
+			let style = new TextStyle({
+			  fontFamily: "Arial",
+			  fontSize: 70,
+			  fill: "white",
+			  stroke: '#0000',
+			  strokeThickness: 4,
+			  dropShadow: true,
+			  dropShadowColor: "#000000",
+			  dropShadowBlur: 4,
+			  dropShadowAngle: Math.PI / 6,
+			  dropShadowDistance: 6,
+			});
+
+			backWord = new Text("返回", style);
+			backWord.position.y = bgH/2+300;
+			backWord.position.x = bgW/2-250;
+			backWord.interactive = true;
+			backWord.on("pointerdown",function(){
+				sceneMain.visible = true;
+				sceneGame1.visible = false;
+				sceneGame2.visible = false;
+				sceneGame3.visible = false;
+				secneEye.visible = false;
+				sceneOver.visible = false;
+				isStart = false;
+			})
+			sceneOver.addChild(backWord);
+
+			againWord = new Text("重来", style);
+			againWord.position.y = bgH/2+300;
+			againWord.position.x = bgW/2+100;
+			againWord.interactive = true;
+			againWord.on("pointerdown",function(){
+				sceneOver.visible = false;
+				game.gameInit();
+				sceneMain.visible = false;
+				sceneGame1.visible = true;
+				sceneGame2.visible = true;
+				sceneGame3.visible = true;
+				secneEye.visible = false;
+				isStart = true;
+			})
+			sceneOver.addChild(againWord);
+
+			app.stage.addChild(sceneOver);
 		},
 		"spineRate":function(n){
 			ninja.update(n);
 		},
-		"moveDate":function(){
-
+		"gameInit":function(){
+			setime = 0;
+			sceneGame1 = null;
+			sceneGame2 = null;
+			sceneGame3 = null;
+			sceneOver = null;
+			sceneEye = null;
+			isStart=false,
+			ObstacleMove=false,
+			isShakeLeft=true,
+			isShake = false,
+			ShakeNum = 0,
+			ShakeFrequency = 2,
+			gameBgArr,
+			stage=1.5,
+			GameSpeed=10,
+			BGspeed=GameSpeed*stage,
+			currentPos = 1,
+			suspendTime = 500,
+			settingTime = 100,
+			startTime = 500,
+			PsettingTime = 100,
+			ShakeTime = 300,
+			bloodNum=1,
+			gameOver = false,
+			ObstacleTips=[],
+			tipsNum=0,
+			tipsMove=false,
+			tipsCome=false,
+			tipsGo=false;
+			game.renderGame();
 		}
 	}
 
@@ -503,6 +776,8 @@ $(function(){
 		.add("map","examples/images/map_Grassland.png")
 		.add("spine_ninja","examples/spine/player/ninja/top/skeleton.json")
 		.add("spine_ninja1","examples/spine/player/ninja/feature/skeleton.json")
+		.add("spine_ninja2","examples/spine/player/ninja/fail/skeleton.json")
+		.add("eye","examples/spine/eye/skeleton.json")
 		.add("mainImg","examples/spine/background/skeleton.json")
 		.on("progress", game.loadProgressHandler)
 		.load(game.render)
